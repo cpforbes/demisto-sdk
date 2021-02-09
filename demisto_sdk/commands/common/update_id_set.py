@@ -1,6 +1,7 @@
 import glob
 import itertools
 import json
+import os
 import re
 import time
 from collections import OrderedDict
@@ -9,6 +10,7 @@ from distutils.version import LooseVersion
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from typing import Callable, Optional, Tuple
+
 import click
 import networkx
 from demisto_sdk.commands.common.constants import (CLASSIFIERS_DIR,
@@ -1103,6 +1105,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     reports_list = []
     widgets_list = []
     mappers_list = []
+
     pool = Pool(processes=int(cpu_count() * 1.5))
 
     print_color("Starting the creation of the id_set", LOG_COLORS.GREEN)
@@ -1301,8 +1304,8 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     if id_set_path:
         with open(id_set_path, 'w+') as id_set_file:
             json.dump(new_ids_dict, id_set_file, indent=4)
-    exec_time = datetime.now().timestamp() - start_time
-    print("Finished the creation of the id_set. Total time: {} seconds".format(exec_time))
+    exec_time = time.time() - start_time
+    print_color("Finished the creation of the id_set. Total time: {} seconds".format(exec_time), LOG_COLORS.GREEN)
     duplicates = find_duplicates(new_ids_dict, print_logs)
     if any(duplicates) and print_logs:
         print_error(
@@ -1310,7 +1313,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
         )
 
     return new_ids_dict
-    return OrderedDict()
+
 
 def find_duplicates(id_set, print_logs):
     lists_to_return = []
@@ -1338,6 +1341,7 @@ def find_duplicates(id_set, print_logs):
         if has_duplicate(fields, field_to_check, 'Indicator and Incident Fields', print_logs):
             field_list.append(field_to_check)
     lists_to_return.append(field_list)
+
     return lists_to_return
 
 
