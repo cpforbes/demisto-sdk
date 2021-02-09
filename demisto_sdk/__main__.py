@@ -778,12 +778,8 @@ def generate_doc(**kwargs):
 @click.option(
     "-o", "--output", help="Output file path, the default is the Tests directory.", default='', required=False)
 def id_set_command(**kwargs):
-    # raise Exception('TEST FAIL FAILLLLLLLLL')
     id_set_creator = IDSetCreator(**kwargs)
-    print("\n\n\nbefore create_id_set\n\n\n")
     id_set_creator.create_id_set()
-    print("\n\n\nafter create_id_set\n\n\n")
-    # sys.exit(0)
 
 
 # ====================== update-release-notes =================== #

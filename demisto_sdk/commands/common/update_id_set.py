@@ -1,9 +1,7 @@
 import glob
 import itertools
 import json
-import os
 import re
-import sys
 import time
 from collections import OrderedDict
 from datetime import datetime
@@ -12,7 +10,6 @@ from functools import partial
 from multiprocessing import Pool, cpu_count
 from typing import Callable, Optional, Tuple
 import os
-import psutil
 import click
 import networkx
 from demisto_sdk.commands.common.constants import (CLASSIFIERS_DIR,
@@ -1041,9 +1038,6 @@ def get_general_paths(path):
 
 DEFAULT_ID_SET_PATH = "./Tests/id_set.json"
 
-def get_memory():
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss
 
 def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_to_create: list = None,  # noqa: C901
                      print_logs: bool = True):
@@ -1056,7 +1050,6 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
 
     Returns: id set object
     """
-    print(f"\n\n\nstartiing re_create_id_set, memory used: {get_memory()}\n\n\n")
     if id_set_path == "":
         id_set_path = DEFAULT_ID_SET_PATH
     if id_set_path and os.path.exists(id_set_path):
@@ -1111,12 +1104,9 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     reports_list = []
     widgets_list = []
     mappers_list = []
-    print(f"\n\n\nstarting pool, memory used: {get_memory()}\n\n\n")
     pool = Pool(processes=int(cpu_count() * 1))
 
     print_color("Starting the creation of the id_set", LOG_COLORS.GREEN)
-    print(f"\n\n\nstartiing with, memory used: {get_memory()}\n\n\n")
-    print(f"\n\n\nobjects_to_create: {objects_to_create}\n\n\n")
     with click.progressbar(length=len(objects_to_create), label="Progress of id set creation") as progress_bar:
         if 'Integrations' in objects_to_create:
             print_color("\nStarting iteration over Integrations", LOG_COLORS.GREEN)
@@ -1308,28 +1298,23 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     new_ids_dict['Reports'] = sort(reports_list)
     new_ids_dict['Widgets'] = sort(widgets_list)
     new_ids_dict['Mappers'] = sort(mappers_list)
-    print(f'\n\n\ntime after initializing new_ids_dict: {datetime.now().time()}\n\n\n')
     if id_set_path:
         with open(id_set_path, 'w+') as id_set_file:
             json.dump(new_ids_dict, id_set_file, indent=4)
     exec_time = datetime.now().timestamp() - start_time
     print("Finished the creation of the id_set. Total time: {} seconds".format(exec_time))
-    print(f'\n\n\ntime before finding duplicates: {datetime.now().time()}\n\n\n')
     duplicates = find_duplicates(new_ids_dict, print_logs)
     if any(duplicates) and print_logs:
         print(
-            f'The following ids were found duplicates - V2 TEST\n\n'
+            f'The following ids were found duplicates\n{json.dumps(duplicates, indent=4)}\n'
         )
 
-    print(f"\n\n\n returning , memory used: {get_memory()} \n\n\n")
     return new_ids_dict
     # return OrderedDict()
 
 def find_duplicates(id_set, print_logs):
     lists_to_return = []
-    print(f'\n\n\nstarting find_duplicates. time is: {datetime.now().time()}\n\n\n')
     for object_type in ID_SET_ENTITIES:
-        print(f'\n\n\nStarting check for object_type: {object_type} in find_duplicates. time is: {datetime.now().time()}\n\n\n')
         if print_logs:
             print_color("Checking diff for {}".format(object_type), LOG_COLORS.GREEN)
         objects = id_set.get(object_type)
@@ -1340,7 +1325,6 @@ def find_duplicates(id_set, print_logs):
             if has_duplicate(objects, id_to_check, object_type, print_logs):
                 dup_list.append(id_to_check)
         lists_to_return.append(dup_list)
-    print(f'\n\n\nFinished iterating object types in find_duplicates. time is: {datetime.now().time()}\n\n\n')
     if print_logs:
         print_color("Checking diff for Incident and Indicator Fields", LOG_COLORS.GREEN)
 
@@ -1352,7 +1336,6 @@ def find_duplicates(id_set, print_logs):
         if has_duplicate(fields, field_to_check, 'Indicator and Incident Fields', print_logs):
             field_list.append(field_to_check)
     lists_to_return.append(field_list)
-    print(f'\n\n\nFinished running find_duplicates. time is: {datetime.now().time()}\n\n\n')
     return lists_to_return
 
 
