@@ -9,7 +9,6 @@ from distutils.version import LooseVersion
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from typing import Callable, Optional, Tuple
-import os
 import click
 import networkx
 from demisto_sdk.commands.common.constants import (CLASSIFIERS_DIR,
@@ -1088,7 +1087,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     if objects_to_create is None:
         objects_to_create = CONTENT_ENTITIES
 
-    start_time = datetime.now().timestamp()
+    start_time = time.time()
     scripts_list = []
     playbooks_list = []
     integration_list = []
@@ -1104,9 +1103,10 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     reports_list = []
     widgets_list = []
     mappers_list = []
-    pool = Pool(processes=int(cpu_count() * 1))
+    pool = Pool(processes=int(cpu_count() * 1.5))
 
     print_color("Starting the creation of the id_set", LOG_COLORS.GREEN)
+
     with click.progressbar(length=len(objects_to_create), label="Progress of id set creation") as progress_bar:
         if 'Integrations' in objects_to_create:
             print_color("\nStarting iteration over Integrations", LOG_COLORS.GREEN)
@@ -1280,7 +1280,6 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
 
         progress_bar.update(1)
 
-    #
     new_ids_dict = OrderedDict()
     # we sort each time the whole set in case someone manually changed something
     # it shouldn't take too much time
@@ -1298,6 +1297,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     new_ids_dict['Reports'] = sort(reports_list)
     new_ids_dict['Widgets'] = sort(widgets_list)
     new_ids_dict['Mappers'] = sort(mappers_list)
+
     if id_set_path:
         with open(id_set_path, 'w+') as id_set_file:
             json.dump(new_ids_dict, id_set_file, indent=4)
@@ -1305,15 +1305,16 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, objects_t
     print("Finished the creation of the id_set. Total time: {} seconds".format(exec_time))
     duplicates = find_duplicates(new_ids_dict, print_logs)
     if any(duplicates) and print_logs:
-        print(
+        print_error(
             f'The following ids were found duplicates\n{json.dumps(duplicates, indent=4)}\n'
         )
 
     return new_ids_dict
-    # return OrderedDict()
+    return OrderedDict()
 
 def find_duplicates(id_set, print_logs):
     lists_to_return = []
+
     for object_type in ID_SET_ENTITIES:
         if print_logs:
             print_color("Checking diff for {}".format(object_type), LOG_COLORS.GREEN)
@@ -1325,6 +1326,7 @@ def find_duplicates(id_set, print_logs):
             if has_duplicate(objects, id_to_check, object_type, print_logs):
                 dup_list.append(id_to_check)
         lists_to_return.append(dup_list)
+
     if print_logs:
         print_color("Checking diff for Incident and Indicator Fields", LOG_COLORS.GREEN)
 
